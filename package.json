@@ -9,15 +9,15 @@
     "seed": "npx tsx scripts/seed.ts"
   },
   "dependencies": {
-    "next": "^14",
+    "@neondatabase/serverless": "^0.9",
+    "next": "^15.5.12",
     "react": "^18",
-    "react-dom": "^18",
-    "@neondatabase/serverless": "^0.9"
+    "react-dom": "^18"
   },
   "devDependencies": {
-    "typescript": "^5",
     "@types/node": "^20",
     "@types/react": "^18",
-    "tsx": "^4"
+    "tsx": "^4",
+    "typescript": "^5"
   }
 }
