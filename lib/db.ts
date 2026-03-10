@@ -34,6 +34,10 @@ function ensureTables(): Promise<void> {
           category_id INTEGER NOT NULL REFERENCES categories(id)
         )
       `;
+      await sql`
+        CREATE UNIQUE INDEX IF NOT EXISTS words_word_category_idx
+        ON words (word, category_id)
+      `;
     })();
   }
   return tablesReady;
@@ -125,6 +129,7 @@ export async function seedDatabase(
     for (const word of item.words) {
       await sql`
         INSERT INTO words (word, category_id) VALUES (${word}, ${categoryId})
+        ON CONFLICT (word, category_id) DO NOTHING
       `;
     }
   }

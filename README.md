@@ -18,6 +18,7 @@ game_api_vercel/
 │   └── api/
 │       ├── health.ts                    → GET /api/health
 │       ├── keys.ts                      → POST /api/keys
+│       ├── seed.ts                      → POST /api/seed
 │       ├── word.ts                      → GET /api/word
 │       ├── words.ts                     → GET /api/words?count=N
 │       └── words/
@@ -61,9 +62,23 @@ game_api_vercel/
    - `ADMIN_SECRET` → une chaîne secrète (ex: générez avec `openssl rand -hex 32`)
 5. Cliquer sur **Deploy**
 
-### 3. Créer la BDD et seeder les données
+### 3. Seeder la base de données
 
-Une fois les variables d'environnement configurées, exécuter localement :
+Une fois le projet déployé sur Vercel, vous pouvez seeder la base de données directement depuis l'API (sans exécuter de script en local) :
+
+```bash
+curl -X POST https://votre-projet.vercel.app/api/seed \
+  -H "x-admin-secret: VOTRE_ADMIN_SECRET"
+```
+
+Réponse :
+```json
+{ "message": "Seeded 10 categories and 1000 words." }
+```
+
+> **Note** : L'endpoint est idempotent — il peut être appelé plusieurs fois sans dupliquer les données. Les tables sont aussi créées automatiquement au premier appel API.
+
+Vous pouvez aussi seeder depuis votre machine locale :
 
 ```bash
 # Installer les dépendances
@@ -72,8 +87,6 @@ npm install
 # Peupler la base de données (crée les tables et insère les 1000 mots)
 npm run seed
 ```
-
-> **Note** : Le script de seed utilise la variable `DATABASE_URL` de votre `.env.local`. Les tables sont aussi créées automatiquement au premier appel API.
 
 ### 4. Générer une clé d'API
 
@@ -105,6 +118,22 @@ curl https://votre-projet.vercel.app/api/health
 Réponse :
 ```json
 { "status": "ok" }
+```
+
+---
+
+### `POST /api/seed`
+
+Seeder la base de données avec les 1000 mots et 10 catégories. Protégé par le header `x-admin-secret`. Idempotent : peut être appelé plusieurs fois sans dupliquer les données.
+
+```bash
+curl -X POST https://votre-projet.vercel.app/api/seed \
+  -H "x-admin-secret: VOTRE_ADMIN_SECRET"
+```
+
+Réponse (200) :
+```json
+{ "message": "Seeded 10 categories and 1000 words." }
 ```
 
 ---
