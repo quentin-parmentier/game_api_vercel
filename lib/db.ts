@@ -44,7 +44,6 @@ function ensureTables(): Promise<void> {
 }
 
 export async function validateApiKey(key: string): Promise<boolean> {
-  await ensureTables();
   const rows = await sql`SELECT id FROM api_keys WHERE key = ${key}`;
   return rows.length > 0;
 }
@@ -52,7 +51,6 @@ export async function validateApiKey(key: string): Promise<boolean> {
 export async function createApiKey(
   name: string
 ): Promise<{ key: string; name: string }> {
-  await ensureTables();
   const key = crypto.randomBytes(32).toString("hex");
   await sql`INSERT INTO api_keys (key, name) VALUES (${key}, ${name})`;
   return { key, name };
@@ -62,7 +60,6 @@ export async function getRandomWord(): Promise<{
   word: string;
   category: string;
 }> {
-  await ensureTables();
   const rows = await sql`
     SELECT w.word, c.name AS category
     FROM words w
@@ -76,7 +73,6 @@ export async function getRandomWord(): Promise<{
 export async function getRandomWords(
   count: number
 ): Promise<Array<{ word: string; category: string }>> {
-  await ensureTables();
   const rows = await sql`
     SELECT w.word, c.name AS category
     FROM words w
@@ -91,7 +87,6 @@ export async function getWordsByCategory(
   category: string,
   count: number
 ): Promise<Array<{ word: string; category: string }> | null> {
-  await ensureTables();
   const cats = await sql`
     SELECT id, name FROM categories WHERE LOWER(name) = LOWER(${category})
   `;
@@ -109,7 +104,6 @@ export async function getWordsByCategory(
 }
 
 export async function listCategories(): Promise<string[]> {
-  await ensureTables();
   const rows = await sql`SELECT name FROM categories ORDER BY name`;
   return (rows as Array<{ name: string }>).map((r) => r.name);
 }
