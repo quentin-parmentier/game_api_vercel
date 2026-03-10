@@ -118,19 +118,35 @@ export async function seedDatabase(
   data: typeof FrenchWordsType
 ): Promise<void> {
   await ensureTables();
-  for (const item of data) {
-    await sql`
-      INSERT INTO categories (name) VALUES (${item.category})
-      ON CONFLICT (name) DO NOTHING
-    `;
-    const cats =
-      await sql`SELECT id FROM categories WHERE name = ${item.category}`;
-    const categoryId = (cats[0] as { id: number }).id;
-    for (const word of item.words) {
-      await sql`
-        INSERT INTO words (word, category_id) VALUES (${word}, ${categoryId})
-        ON CONFLICT (word, category_id) DO NOTHING
-      `;
-    }
-  }
+
+  // 1. Insert all categories in one batch
+  const categoryNames = data.map((item) => item.category);
+  await sql`
+    INSERT INTO categories (name)
+    SELECT unnest(${categoryNames}::text[])
+    ON CONFLICT (name) DO NOTHING
+  `;
+
+  // 2. Fetch all category IDs in one query
+  const cats = await sql`
+    SELECT id, name FROM categories WHERE name = ANY(${categoryNames}::text[])
+  `;
+  const categoryMap = new Map(
+    (cats as Array<{ id: number; name: string }>).map((c) => [c.name, c.id])
+  );
+
+  // 3. Build all word rows and insert in one batch
+  const wordRows = data.flatMap((item) => {
+    const category_id = categoryMap.get(item.category);
+    if (category_id === undefined) return [];
+    return item.words.map((word) => ({ word, category_id }));
+  });
+  const words = wordRows.map((r) => r.word);
+  const categoryIds = wordRows.map((r) => r.category_id);
+
+  await sql`
+    INSERT INTO words (word, category_id)
+    SELECT unnest(${words}::text[]), unnest(${categoryIds}::int[])
+    ON CONFLICT (word, category_id) DO NOTHING
+  `;
 }
