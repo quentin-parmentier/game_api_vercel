@@ -1,0 +1,22 @@
+{
+  "name": "game-api-vercel",
+  "version": "1.0.0",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "seed": "npx tsx scripts/seed.ts"
+  },
+  "dependencies": {
+    "next": "^14",
+    "react": "^18",
+    "react-dom": "^18",
+    "@neondatabase/serverless": "^0.9"
+  },
+  "devDependencies": {
+    "typescript": "^5",
+    "@types/node": "^20",
+    "@types/react": "^18",
+    "tsx": "^4"
+  }
+}
