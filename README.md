@@ -21,12 +21,21 @@ game_api_vercel/
 │       ├── seed.ts                      → POST /api/seed
 │       ├── word.ts                      → GET /api/word
 │       ├── words.ts                     → GET /api/words?count=N
-│       └── words/
-│           └── category/
-│               └── [name].ts            → GET /api/words/category/:name?count=N
+│       ├── words/
+│       │   └── category/
+│       │       └── [name].ts            → GET /api/words/category/:name?count=N
+│       └── bff/
+│           ├── word.ts                  → GET /api/bff/word
+│           ├── words.ts                 → GET /api/bff/words?count=N
+│           ├── categories.ts            → GET /api/bff/categories
+│           └── words/
+│               └── category/
+│                   └── [name].ts        → GET /api/bff/words/category/:name?count=N
 ├── lib/
 │   ├── db.ts                            → connexion Neon + helpers SQL
-│   └── auth.ts                          → middleware d'authentification
+│   ├── auth.ts                          → middleware d'authentification (API key)
+│   ├── bff-auth.ts                      → middleware d'authentification BFF (Flutter)
+│   └── utils.ts                         → helpers CORS + parsing
 ├── data/
 │   └── french-words.ts                  → 1000 mots en 10 catégories
 ├── scripts/
@@ -43,6 +52,7 @@ game_api_vercel/
 |---|---|
 | `DATABASE_URL` | Connection string Neon PostgreSQL (ex: `postgresql://user:pass@ep-xxx.neon.tech/neondb?sslmode=require`) |
 | `ADMIN_SECRET` | Secret pour protéger `POST /api/keys` |
+| `FLUTTER_APP_SECRET` | Secret partagé entre l'app Flutter et les routes BFF (protège `/api/bff/*`) |
 
 ## Déploiement sur Vercel
 
@@ -245,6 +255,100 @@ Tous les endpoints `/api/*` sauf `GET /api/health` et `POST /api/keys` nécessit
 - Header `Authorization: Bearer <key>`
 - OU header `x-api-key: <key>`
 
+## BFF Routes (Flutter App)
+
+### Pourquoi un BFF ?
+
+L'app Flutter **ne doit jamais** contenir la clé API (elle serait extractable par décompilation). Les routes `/api/bff/*` servent de proxy sécurisé : le Flutter s'authentifie avec un secret distinct (`FLUTTER_APP_SECRET`), le serveur appelle directement les fonctions de base de données en interne, sans exposer la vraie clé API.
+
+### Authentification BFF
+
+Toutes les routes BFF nécessitent le header :
+
+```
+x-flutter-secret: <FLUTTER_APP_SECRET>
+```
+
+Configurer la variable d'environnement `FLUTTER_APP_SECRET` sur Vercel avec une valeur secrète (ex: `openssl rand -hex 32`).
+
+---
+
+### `GET /api/bff/word`
+
+Retourne un mot aléatoire avec sa catégorie.
+
+```bash
+curl https://votre-projet.vercel.app/api/bff/word \
+  -H "x-flutter-secret: VOTRE_FLUTTER_APP_SECRET"
+```
+
+Réponse :
+```json
+{ "word": "guitare", "category": "Musique et arts" }
+```
+
+---
+
+### `GET /api/bff/words?count=N`
+
+Retourne N mots aléatoires (défaut : 10, max : 100).
+
+```bash
+curl "https://votre-projet.vercel.app/api/bff/words?count=5" \
+  -H "x-flutter-secret: VOTRE_FLUTTER_APP_SECRET"
+```
+
+Réponse :
+```json
+{
+  "count": 5,
+  "words": [
+    { "word": "chat", "category": "Animaux" },
+    { "word": "piano", "category": "Musique et arts" }
+  ]
+}
+```
+
+---
+
+### `GET /api/bff/words/category/:name?count=N`
+
+Retourne N mots d'une catégorie spécifique (défaut : 10, max : 100). Retourne 404 si la catégorie est inconnue.
+
+```bash
+curl "https://votre-projet.vercel.app/api/bff/words/category/Animaux?count=5" \
+  -H "x-flutter-secret: VOTRE_FLUTTER_APP_SECRET"
+```
+
+Réponse :
+```json
+{
+  "count": 5,
+  "words": [
+    { "word": "chien", "category": "Animaux" },
+    { "word": "chat", "category": "Animaux" }
+  ]
+}
+```
+
+---
+
+### `GET /api/bff/categories`
+
+Retourne la liste des catégories disponibles.
+
+```bash
+curl https://votre-projet.vercel.app/api/bff/categories \
+  -H "x-flutter-secret: VOTRE_FLUTTER_APP_SECRET"
+```
+
+Réponse :
+```json
+{ "categories": ["Animaux", "Cuisine et gastronomie", "..."] }
+```
+
+---
+
 ## Développement local
 
 ```bash
@@ -259,6 +363,7 @@ npm install
 cat > .env.local << EOF
 DATABASE_URL=postgresql://user:pass@ep-xxx.neon.tech/neondb?sslmode=require
 ADMIN_SECRET=votre-secret-local
+FLUTTER_APP_SECRET=votre-flutter-secret-local
 EOF
 
 # Peupler la base de données
